@@ -1,0 +1,22 @@
+{
+  "verify_items": [
+    {
+      "id": 1,
+      "name": "startup check",
+      "steps": [
+        {"type": "sleep", "seconds": 5},
+        {"target": "dut0", "cmd": "", "timeout_s": 5, "judge": {"fn": "prompt_seen"}},
+        {"target": "dut0", "cmd": "version", "timeout_s": 10, "judge": {"fn": "extract_version"}}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "status check",
+      "steps": [
+        {"target": "dut0", "cmd": "status", "timeout_s": 10},
+        {"target": "dut1", "cmd": "status", "timeout_s": 10,
+         "judge": {"fn": "not_contains", "args": {"any": ["error", "fault"]}}}
+      ]
+    }
+  ]
+}

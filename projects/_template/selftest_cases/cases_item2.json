@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "item2 status: clean on both targets",
+      "item": 2,
+      "responses": [
+        {"text": "\r\nstate=IDLE\r\ndut0> ", "ok": true},
+        {"text": "\r\nstate=IDLE\r\ndut1> ", "ok": true}
+      ],
+      "expect_pass": true
+    },
+    {
+      "name": "item2 status: fault string on dut1",
+      "item": 2,
+      "responses": [
+        {"text": "\r\nstate=IDLE\r\ndut0> ", "ok": true},
+        {"text": "\r\nstate=RUNNING, link fault detected\r\ndut1> ", "ok": true}
+      ],
+      "expect_pass": false
+    }
+  ]
+}

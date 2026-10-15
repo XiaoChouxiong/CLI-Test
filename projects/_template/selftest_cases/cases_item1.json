@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "item1 startup: prompt probe + version found",
+      "item": 1,
+      "responses": [
+        {"text": "\r\n\r\ndut0> ", "ok": true},
+        {"text": "\r\nfw version: v2.3.1\r\nbuild 2026-01-01\r\ndut0> ", "ok": true}
+      ],
+      "expect_pass": true
+    },
+    {
+      "name": "item1 startup: version line missing",
+      "item": 1,
+      "responses": [
+        {"text": "\r\n\r\ndut0> ", "ok": true},
+        {"text": "\r\nunknown command\r\ndut0> ", "ok": true}
+      ],
+      "expect_pass": false
+    }
+  ]
+}

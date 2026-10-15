@@ -1,0 +1,7 @@
+{
+  "targets": [
+    {"name": "dut0", "prompt": "dut0>"},
+    {"name": "dut1", "prompt": "dut1>"}
+  ],
+  "serial": {"baudrate": 115200, "bytesize": 8, "parity": "N", "stopbits": 1}
+}
