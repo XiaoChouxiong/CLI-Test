@@ -143,10 +143,18 @@ def run_selftest(proj_dir, load_project, load_verify_items, load_judges,
         check("%s: %s" % (case["name"],
                           "expect PASS" if case["expect_pass"] else "expect FAIL"),
               ok)
-        if not ok:
+        on_fail_ok = True
+        if "expect_on_fail" in case:
+            fired = any(c.kind == "on_fail" for c in res.checks)
+            on_fail_ok = fired == bool(case["expect_on_fail"])
+            check("%s: on_fail %s"
+                  % (case["name"], "fired" if fired else "not fired"),
+                  on_fail_ok)
+        if not ok or not on_fail_ok:
             for c in res.checks:
-                print("        check %d: %s -> %s %s"
-                      % (c.index, c.desc,
+                tag = "" if c.kind == "step" else "[%s] " % c.kind
+                print("        %scheck %d: %s -> %s %s"
+                      % (tag, c.index, c.desc,
                          "PASS" if c.passed else "FAIL", c.detail))
 
     print("selftest: %d cases, %d failed" % (total[0], len(failures)))

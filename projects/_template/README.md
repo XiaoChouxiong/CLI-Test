@@ -30,6 +30,25 @@ def my_judge(text, args, ctx):
 Steps without a `judge` only fail on prompt timeout; steps with one are
 judged after the framework layer confirms the prompt returned.
 
+## Exception handling (`on_fail`)
+
+An item may declare an optional `on_fail` list of steps (same schema as
+`steps`). They run **only when the item fails** (prompt timeout or judge
+mismatch), best-effort, before the framework returns the FAIL result -- e.g.
+capture a diagnostic dump for post-mortem. Their own result never changes the
+item verdict or the exit code.
+
+```json
+{
+  "id": 2,
+  "name": "status check",
+  "steps": [ ... ],
+  "on_fail": [
+    {"target": "dut0", "cmd": "dump", "timeout_s": 30}
+  ]
+}
+```
+
 ## Try it offline first
 
 ```bash

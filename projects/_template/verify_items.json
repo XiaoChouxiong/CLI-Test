@@ -16,6 +16,9 @@
         {"target": "dut0", "cmd": "status", "timeout_s": 10},
         {"target": "dut1", "cmd": "status", "timeout_s": 10,
          "judge": {"fn": "not_contains", "args": {"any": ["error", "fault"]}}}
+      ],
+      "on_fail": [
+        {"target": "dut0", "cmd": "dump", "timeout_s": 30}
       ]
     }
   ]

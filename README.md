@@ -50,6 +50,25 @@ ports keep recording -- nothing is dropped.
  "judge": {"fn": "not_contains", "args": {"any": ["error", "fault"]}}}
 ```
 
+### Exception handling (`on_fail`)
+
+An item may declare an optional `on_fail` list of steps (same schema as
+`steps`, `sleep` included). They run **only when the item fails** -- a
+prompt timeout or a judge mismatch -- best-effort and in declared order,
+before the framework returns the FAIL result, e.g. to capture a diagnostic
+dump for post-mortem:
+
+```json
+{"id": 2, "name": "status check",
+ "steps": [{"target": "dut0", "cmd": "status", "timeout_s": 10}],
+ "on_fail": [{"target": "dut0", "cmd": "dump", "timeout_s": 30}]}
+```
+
+Their own outcome never changes the item verdict or the exit code: each hook
+step is recorded as an `[on_fail]` check (with its own prompt-timeout
+verdict) and its echo still lands in the target's raw log. Offline selftest
+cases can assert whether the hook ran with `"expect_on_fail": true|false`.
+
 ### Judge contract
 
 ```python

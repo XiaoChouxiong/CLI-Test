@@ -113,10 +113,12 @@ def _bad_items(msg):
 def load_verify_items(proj_dir):
     """Load + validate verify_items.json; returns the verify item list.
 
-    Each item: {"id": int, "name": str, "steps": [...]}. A step is either a
-    command (target/cmd/timeout_s, optional judge) or a sleep
-    (type="sleep", seconds>0). judge = {"fn": str, "args": {...}} references
-    a function in the project judges.py (loaded separately).
+    Each item: {"id": int, "name": str, "steps": [...]}, plus an optional
+    "on_fail": [step, ...] best-effort diagnostic sequence run after a
+    failing step. A step is either a command (target/cmd/timeout_s, optional
+    judge) or a sleep (type="sleep", seconds>0). judge = {"fn": str,
+    "args": {...}} references a function in the project judges.py (loaded
+    separately).
     """
     pdir = Path(proj_dir)
     vfile = pdir / "verify_items.json"
@@ -154,34 +156,40 @@ def load_verify_items(proj_dir):
             _bad_items("item %r: steps must be a non-empty list" % it_id)
         for idx, step in enumerate(steps, 1):
             _validate_step(it_id, idx, step)
+        on_fail = it.get("on_fail")
+        if on_fail is not None:
+            if not isinstance(on_fail, list) or not on_fail:
+                _bad_items("item %r: on_fail must be a non-empty list" % it_id)
+            for idx, step in enumerate(on_fail, 1):
+                _validate_step(it_id, "on_fail#%d" % idx, step)
     return items
 
 
 def _validate_step(it_id, idx, step):
     if not isinstance(step, dict):
-        _bad_items("item %s step %d: must be an object" % (it_id, idx))
+        _bad_items("item %s step %s: must be an object" % (it_id, idx))
     if step.get("type") == "sleep":
         if not step.get("seconds", 0) > 0:
-            _bad_items("item %s step %d: sleep needs seconds>0" % (it_id, idx))
+            _bad_items("item %s step %s: sleep needs seconds>0" % (it_id, idx))
         return
     target = step.get("target")
     if not isinstance(target, str) or not target:
-        _bad_items("item %s step %d: target must be a non-empty string"
+        _bad_items("item %s step %s: target must be a non-empty string"
                    % (it_id, idx))
     cmd = step.get("cmd", "")
     if not isinstance(cmd, str):
-        _bad_items("item %s step %d: cmd must be a string" % (it_id, idx))
+        _bad_items("item %s step %s: cmd must be a string" % (it_id, idx))
     if not step.get("timeout_s", 0) > 0:
-        _bad_items("item %s step %d: timeout_s must be >0" % (it_id, idx))
+        _bad_items("item %s step %s: timeout_s must be >0" % (it_id, idx))
     judge = step.get("judge")
     if judge is None:
         return
     if not isinstance(judge, dict):
-        _bad_items("item %s step %d: judge must be an object" % (it_id, idx))
+        _bad_items("item %s step %s: judge must be an object" % (it_id, idx))
     fn = judge.get("fn")
     if not isinstance(fn, str) or not fn:
-        _bad_items("item %s step %d: judge.fn must be a non-empty string"
+        _bad_items("item %s step %s: judge.fn must be a non-empty string"
                    % (it_id, idx))
     args = judge.get("args")
     if args is not None and not isinstance(args, dict):
-        _bad_items("item %s step %d: judge.args must be an object" % (it_id, idx))
+        _bad_items("item %s step %s: judge.args must be an object" % (it_id, idx))

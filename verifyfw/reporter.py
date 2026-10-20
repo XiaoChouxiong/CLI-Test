@@ -18,6 +18,7 @@ class CheckOutcome:
     passed: bool
     detail: str = ""
     evidence: list = field(default_factory=list)
+    kind: str = "step"   # "step" | "on_fail" (best-effort diagnostic step)
 
 
 @dataclass
@@ -58,8 +59,9 @@ class Reporter:
                  % ("PASS" if item.passed else "FAIL", item.item_id,
                     item.name, item.duration_s)]
         for ck in item.checks:
-            lines.append("    check %d: %s -> %s %s"
-                         % (ck.index, ck.desc,
+            tag = "" if ck.kind == "step" else "[%s] " % ck.kind
+            lines.append("    %scheck %d: %s -> %s %s"
+                         % (tag, ck.index, ck.desc,
                             "PASS" if ck.passed else "FAIL", ck.detail))
             # Console stays readable: full evidence only for failures / files
             if show_evidence or not ck.passed:

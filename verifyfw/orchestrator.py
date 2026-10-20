@@ -2,8 +2,10 @@
 """Orchestrator: run verify items (JSON steps) against serial sessions.
 
 Steps are executed linearly; the first FAIL aborts the item (mode 0/1
-fail-fast semantics). Judge rules reference functions from the project
-judges.py, resolved by judge_loader.resolve_judges.
+fail-fast semantics). An item may declare optional on_fail steps: they run
+best-effort after the failure (e.g. a diagnostic dump) before the item
+returns FAIL, and never change the verdict. Judge rules reference functions
+from the project judges.py, resolved by judge_loader.resolve_judges.
 """
 
 import time
@@ -20,11 +22,38 @@ def _fmt_desc(step):
     return "%s> %s" % (step.get("target", "?"), step.get("cmd", "") or "<CR>")
 
 
+def _run_on_fail(item, sessions, sleep_all, checks):
+    """Best-effort diagnostic steps, run only after the item already failed.
+
+    Their own success/failure never changes the item verdict; they just add
+    [on_fail] checks (and their echoes land in the target's raw log).
+    """
+    for idx, step in enumerate(item.get("on_fail", []), 1):
+        if step.get("type") == "sleep":
+            sleep_all(float(step.get("seconds", 0)))
+            checks.append(CheckOutcome(idx, _fmt_desc(step), True,
+                                       kind="on_fail"))
+            continue
+        sess = sessions[step["target"]]
+        _, ok = sess.send_cmd(step.get("cmd", ""), step.get("timeout_s", 10))
+        detail = "on_fail done" if ok else "on_fail timeout, prompt not seen"
+        checks.append(CheckOutcome(idx, _fmt_desc(step), ok, detail,
+                                   kind="on_fail"))
+
+
+def _finish_fail(item, t_start, checks, sessions, sleep_all):
+    """Run on_fail steps (if any) then return the item's FAIL result."""
+    _run_on_fail(item, sessions, sleep_all, checks)
+    return ItemResult(item["id"], item["name"], False,
+                      time.monotonic() - t_start, checks)
+
+
 def run_item(item, sessions, sleep_all, judges):
     """Run all steps of one item; first failing step aborts the item.
 
     judges maps fn name -> callable with signature
     fn(text, args, ctx) -> (ok, detail, evidence).
+    On failure the item's optional on_fail steps run first (best-effort).
     """
     t_start = time.monotonic()
     checks = []
@@ -39,8 +68,7 @@ def run_item(item, sessions, sleep_all, judges):
         if not ok:
             checks.append(CheckOutcome(idx, desc, False,
                                        "timeout, prompt not seen"))
-            return ItemResult(item["id"], item["name"], False,
-                              time.monotonic() - t_start, checks)
+            return _finish_fail(item, t_start, checks, sessions, sleep_all)
         judge = step.get("judge")
         if judge:
             fn = judges[judge["fn"]]
@@ -50,8 +78,7 @@ def run_item(item, sessions, sleep_all, judges):
             checks.append(CheckOutcome(idx, desc, bool(passed), detail,
                                        evidence or []))
             if not passed:
-                return ItemResult(item["id"], item["name"], False,
-                                  time.monotonic() - t_start, checks)
+                return _finish_fail(item, t_start, checks, sessions, sleep_all)
         else:
             checks.append(CheckOutcome(idx, desc, True))
     return ItemResult(item["id"], item["name"], True,
